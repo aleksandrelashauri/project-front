@@ -26,6 +26,11 @@ import Select from "@mui/material/Select";
 import * as yup from "yup";
 import axios from "axios";
 import Webcam from "react-webcam";
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import { PdfDocument } from "./Pdf";
+
+import { PDFViewer } from "@react-pdf/renderer";
+import MyDocument from "./Pdf";
 
 export default function Main() {
   const classes = useStyles();
@@ -39,11 +44,11 @@ export default function Main() {
   const [city, setCity] = useState("");
   const [mail, setMail] = useState("");
   const [birthday, setBirthday] = useState(dayjs("2022-09-18T21:11:54"));
-  const [children, setChildren] = useState("");
+  const [experience, setExperience] = useState("");
   const [english, setEnglish] = useState("");
   const [nativeLanguage, setNativeLanguage] = useState("german");
   const [image, setImage] = useState("");
-
+  const [details, setDetails] = useState("");
   const steps = ["o", "n", "e", "r"];
 
   const webcamRef = React.useRef(null);
@@ -68,11 +73,21 @@ export default function Main() {
   };
 
   const isLastStep = () => {
+    // getForm()
     return activeStep === totalSteps() - 1;
   };
 
   const allStepsCompleted = () => {
+    // getForm()
+    // activeStep === 2 ? getForm() : null
     return completedSteps() === totalSteps();
+  };
+
+  const getForm = async () => {
+    const response = await axios("/persons", {
+      method: "GET",
+    });
+    setDetails(response.data.data.persons);
   };
 
   const handleNext = () => {
@@ -81,7 +96,8 @@ export default function Main() {
         ? steps.findIndex((step, i) => !(i in completed))
         : activeStep + 1;
     setActiveStep(newActiveStep);
-    isLastStep() ? submitValue() : null;
+    activeStep === 1 ? submitValue() : null;
+    activeStep === 2 ? getForm() : null;
   };
 
   const handleBack = () => {
@@ -108,7 +124,7 @@ export default function Main() {
       city,
       mail,
       birthday,
-      children,
+      experience,
       english,
       nativeLanguage,
       image,
@@ -124,6 +140,7 @@ export default function Main() {
           city: inputList.city,
           mail: inputList.mail,
           birthday: inputList.birthday,
+          experience: inputList.experience,
           english: inputList.english,
           nativeLanguage: inputList.nativeLanguage,
           image: inputList.image,
@@ -232,54 +249,34 @@ export default function Main() {
               renderInput={(params) => <TextField {...params} />}
             />
           </LocalizationProvider>
-        </Box>
-      );
-    } else if (activeStep === 1) {
-      return (
-        <FormControl>
-          <FormLabel id="demo-row-radio-buttons-group-label">
-            do you have children
-          </FormLabel>
-          <RadioGroup
-            row
-            aria-labelledby="demo-row-radio-buttons-group-label"
-            name="row-radio-buttons-group"
-            onClick={(e) => setChildren(e.target.value)}
-          >
-            <FormControlLabel value="yes" control={<Radio />} label="yes" />
-            <FormControlLabel value="no" control={<Radio />} label="no" />
-          </RadioGroup>
-        </FormControl>
-      );
-    } else if (activeStep === 2) {
-      return (
-        <FormControl>
-          <FormLabel id="demo-row-radio-buttons-group-label">
-            English level
-          </FormLabel>
-          <RadioGroup
-            row
-            aria-labelledby="demo-row-radio-buttons-group-label"
-            name="row-radio-buttons-group"
-            onChange={(e) => setEnglish(e.target.value)}
-          >
-            <FormControlLabel value="none" control={<Radio />} label="none" />
-            <FormControlLabel
-              value="beginner"
-              control={<Radio />}
-              label="beginner"
-            />
-            <FormControlLabel
-              value="intermediate"
-              control={<Radio />}
-              label="intermediate"
-            />
-            <FormControlLabel
-              value="advanced"
-              control={<Radio />}
-              label="advanced"
-            />
-          </RadioGroup>
+          <FormControl fullWidth>
+            <FormLabel id="demo-row-radio-buttons-group-label">
+              English level
+            </FormLabel>
+
+            <RadioGroup
+              row
+              aria-labelledby="demo-row-radio-buttons-group-label"
+              name="row-radio-buttons-group"
+              onChange={(e) => setEnglish(e.target.value)}
+            >
+              <FormControlLabel
+                value="beginner"
+                control={<Radio />}
+                label="beginner"
+              />
+              <FormControlLabel
+                value="intermediate"
+                control={<Radio />}
+                label="intermediate"
+              />
+              <FormControlLabel
+                value="advanced"
+                control={<Radio />}
+                label="advanced"
+              />
+            </RadioGroup>
+          </FormControl>
           <FormControl fullWidth>
             <InputLabel id="demo-multiple-name-label">
               native language
@@ -296,9 +293,19 @@ export default function Main() {
               <MenuItem value={"georgian"}>georgian</MenuItem>
             </Select>
           </FormControl>
-        </FormControl>
+          <FormControl fullWidth>
+            <TextField
+              label="Tell us about your past experience"
+              multiline
+              fullWidth
+              rows={6}
+              sx={{ width: "300px" }}
+              onChange={(e) => setExperience(e.target.value)}
+            />
+          </FormControl>
+        </Box>
       );
-    } else {
+    } else if (activeStep === 1) {
       return (
         <div className="webcam-container">
           <div className="webcam-img">
@@ -315,6 +322,7 @@ export default function Main() {
               <img src={image} />
             )}
           </div>
+
           <div>
             {image != "" ? (
               <button
@@ -340,10 +348,31 @@ export default function Main() {
           </div>
         </div>
       );
+    } else if (activeStep === 2) {
+      return <>congrats your cv is next page</>;
+    } else if (activeStep === 3) {
+      return (
+        <PDFDownloadLink
+          document={<PdfDocument data={details} />}
+          fileName="movielist.pdf"
+          style={{
+            textDecoration: "none",
+            padding: "10px",
+            color: "#4a4a4a",
+            backgroundColor: "#f2f2f2",
+            border: "1px solid #4a4a4a",
+          }}
+        >
+          {({ blob, url, loading, error }) =>
+            loading ? "Loading document..." : "Download Pdf"
+          }
+        </PDFDownloadLink>
+      );
     }
   };
   return (
     <Box sx={{ width: "100%" }}>
+      {/* <Button onClick={getForm}>get PDF </Button> */}
       <Stepper nonLinear activeStep={activeStep} className={classes.line}>
         {steps.map((label, index) => (
           <Step key={label} completed={completed[index]}>
@@ -369,8 +398,13 @@ export default function Main() {
                 sx={{ mr: 1 }}
               ></Button>
               <Box sx={{ flex: "1 1 auto" }} />
-              <Button onClick={handleNext} sx={{ mr: 1 }}>
-                {isLastStep() ? "SUBMIT" : " Next"}
+              <Button
+                onClick={(e) => {
+                  handleNext(e);
+                }}
+                sx={{ mr: 1 }}
+              >
+                {isLastStep() ? "Done" : " Next"}
               </Button>
             </Box>
           </React.Fragment>
